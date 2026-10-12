@@ -12,6 +12,12 @@ def client(monkeypatch):
     return TestClient(server.app)
 
 
+@pytest.fixture
+def no_device(monkeypatch):
+    # Control routes shouldn't actually touch the network in tests.
+    monkeypatch.setattr("divroom.control.Pixoo.color", lambda self, hex: None)
+
+
 def test_discover_endpoint(client):
     r = client.get("/api/discover")
     assert r.status_code == 200
@@ -33,16 +39,18 @@ def test_control_image_rejects_non_image(client):
     assert r.status_code == 400
 
 
-def test_rejects_foreign_origin(client):
-    r = client.post("/api/capture/stop", headers={"origin": "http://evil.example"})
+def test_rejects_foreign_origin(client, no_device):
+    r = client.post("/api/control/color", json={"ip": "192.168.4.20", "hex": "ff0000"},
+                    headers={"origin": "http://evil.example"})
     assert r.status_code == 403
 
 
-def test_allows_localhost_origin(client):
-    r = client.post("/api/capture/stop", headers={"origin": "http://127.0.0.1:8000"})
+def test_allows_localhost_origin(client, no_device):
+    r = client.post("/api/control/color", json={"ip": "192.168.4.20", "hex": "ff0000"},
+                    headers={"origin": "http://127.0.0.1:8000"})
     assert r.status_code == 200
 
 
-def test_allows_no_origin(client):
-    r = client.post("/api/capture/stop")
+def test_allows_no_origin(client, no_device):
+    r = client.post("/api/control/color", json={"ip": "192.168.4.20", "hex": "ff0000"})
     assert r.status_code == 200

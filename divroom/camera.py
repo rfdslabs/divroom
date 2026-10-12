@@ -123,9 +123,18 @@ class CameraStream:
         self._stop = threading.Event()
         self._threads = []
         self._proc = None
+        self._pixoo = None
+        self._pic_id = 0
 
     def _default_player(self, frame):
-        Pixoo(self.ip).send_frames([frame], speed_ms=self.speed)
+        # One SendHttpGif per frame (no per-frame reset/get-id) for ~3x the rate;
+        # reset the gif id every 60 frames to keep the device accepting new ones.
+        if self._pixoo is None:
+            self._pixoo = Pixoo(self.ip)
+        if self._pic_id % 60 == 0:
+            self._pixoo.reset_gif()
+        self._pic_id += 1
+        self._pixoo.push_still(frame, self._pic_id)
 
     def _iter_source(self):
         return iter(self._source) if self._source is not None else self._ffmpeg_frames()

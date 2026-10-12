@@ -46,6 +46,15 @@ class Pixoo:
                      PicOffset=offset, PicID=pic_id, PicSpeed=speed_ms,
                      PicData=base64.b64encode(frame.tobytes()).decode())
 
+    def reset_gif(self):
+        self.cmd("Draw/ResetHttpGifId")
+
+    def push_still(self, frame, pic_id, speed_ms=1000):
+        """One-request single-frame upload for live streaming (no reset/get-id)."""
+        self.cmd("Draw/SendHttpGif", PicNum=1, PicWidth=SIZE, PicOffset=0,
+                 PicID=pic_id, PicSpeed=speed_ms,
+                 PicData=base64.b64encode(frame.tobytes()).decode())
+
     def color(self, hex):
         self.send_frames([Image.new("RGB", (SIZE, SIZE), "#" + hex.lstrip("#"))])
 

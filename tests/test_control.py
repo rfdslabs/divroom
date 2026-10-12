@@ -55,6 +55,20 @@ def test_color_builds_single_frame(monkeypatch):
     assert calls[0][0].getpixel((0, 0)) == (255, 0, 128)
 
 
+def test_push_still_sends_one_sendhttpgif(monkeypatch):
+    from PIL import Image
+    sent = []
+    monkeypatch.setattr("divroom.control.requests.post",
+                        lambda url, json=None, timeout=None: (sent.append(json),
+                                                              FakeResp({"error_code": 0}))[1])
+    Pixoo("1.2.3.4").push_still(Image.new("RGB", (64, 64), (1, 2, 3)), pic_id=5)
+    assert len(sent) == 1                       # a single request, not 3
+    j = sent[0]
+    assert j["Command"] == "Draw/SendHttpGif"
+    assert j["PicNum"] == 1 and j["PicID"] == 5 and j["PicOffset"] == 0
+    assert j["PicWidth"] == 64 and "PicData" in j
+
+
 def test_channels_map():
     assert CHANNELS == {"faces": 0, "cloud": 1, "visualizer": 2, "custom": 3}
 

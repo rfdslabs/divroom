@@ -56,38 +56,43 @@ async function control(act) {
 }
 document.querySelectorAll("[data-act]").forEach(b => b.onclick = () => control(b.dataset.act));
 
-// --- random slideshow: pick a piece from the year, scroll it, re-pick every 30s
-const SHOW_INTERVAL_MS = 30000;
-let showTimer = null;
-
-async function pickAndPlay() {
-  const stat = $("showstat");
-  const year = $("year").value || 2024;
-  stat.textContent = "picking…";
-  try {
-    const pick = await (await fetch(`/api/art/random?year=${encodeURIComponent(year)}`)).json();
-    if (pick.detail) { stat.textContent = "pick failed: " + pick.detail; return; }
-    const body = { ip: deviceIp, pack: pick.pack, file: pick.file, frames: 60, speed: +$("speed").value };
-    const r = await fetch("/api/art", {
-      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-    const d = await r.json();
-    stat.textContent = r.ok ? `▶ ${pick.pack} / ${pick.file}` : ("error: " + (d.detail || r.status));
-  } catch (e) { stat.textContent = String(e); }
-}
+// --- random slideshow: server-side, with a prefetch buffer (10 ahead)
+let showPoll = null;
 
 function setShowRunning(on) {
   $("startshow").disabled = on; $("stopshow").disabled = !on;
 }
-$("startshow").onclick = () => {
-  if (showTimer || !deviceIp) return;
+
+async function pollShow() {
+  try {
+    const s = await (await fetch("/api/slideshow/status")).json();
+    setShowRunning(s.running);
+    if (s.running) {
+      const cur = s.current ? `▶ ${s.current.pack} / ${s.current.file}` : "buffering…";
+      $("showstat").textContent = `${cur}  ·  ${s.queued} ready` + (s.error ? `  ·  ${s.error}` : "");
+    }
+  } catch {}
+}
+
+$("startshow").onclick = async () => {
+  if (!deviceIp) return;
   setShowRunning(true);
-  pickAndPlay();
-  showTimer = setInterval(pickAndPlay, SHOW_INTERVAL_MS);
+  $("showstat").textContent = "starting · buffering 10 pieces…";
+  await fetch("/api/slideshow/start", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ip: deviceIp, year: +$("year").value || 2024, speed: +$("speed").value }) });
+  if (!showPoll) showPoll = setInterval(pollShow, 2000);
+  pollShow();
 };
-$("stopshow").onclick = () => {
-  clearInterval(showTimer); showTimer = null;
+$("stopshow").onclick = async () => {
+  await fetch("/api/slideshow/stop", { method: "POST" });
+  clearInterval(showPoll); showPoll = null;
   setShowRunning(false);
   $("showstat").textContent = "stopped";
 };
 
 loadDevice();
+// reflect an already-running slideshow (it lives in the server, not this tab)
+fetch("/api/slideshow/status").then(r => r.json()).then(s => {
+  if (s.running) { setShowRunning(true); showPoll = setInterval(pollShow, 2000); pollShow(); }
+});

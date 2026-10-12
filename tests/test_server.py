@@ -94,6 +94,37 @@ def test_art_fetch_failure_returns_502(client, monkeypatch):
     assert r.status_code == 502
 
 
+def test_slideshow_start_stop_status(client, monkeypatch):
+    import divroom.server as srv
+
+    class FakeShow:
+        def __init__(self, **kw): self.kw = kw; self._running = False
+        def start(self): self._running = True; return self
+        def stop(self): self._running = False
+        def status(self):
+            return {"running": self._running, "year": self.kw.get("year"),
+                    "current": {"pack": "p", "file": "f.ANS"}, "queued": 7, "error": None}
+
+    monkeypatch.setattr(srv, "Slideshow", FakeShow)
+    srv._show = None
+
+    r = client.post("/api/slideshow/start", json={"ip": "192.168.4.20", "year": 1994})
+    assert r.status_code == 200 and r.json()["running"] is True and r.json()["queued"] == 7
+
+    r = client.get("/api/slideshow/status")
+    assert r.status_code == 200 and r.json()["current"]["pack"] == "p"
+
+    r = client.post("/api/slideshow/stop")
+    assert r.status_code == 200 and r.json()["running"] is False
+
+
+def test_slideshow_status_idle_when_never_started(client, monkeypatch):
+    import divroom.server as srv
+    srv._show = None
+    r = client.get("/api/slideshow/status")
+    assert r.status_code == 200 and r.json()["running"] is False
+
+
 def test_control_image_rejects_non_image(client):
     r = client.post("/api/control/image",
                     data={"ip": "192.168.4.20"},

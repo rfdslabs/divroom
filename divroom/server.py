@@ -10,12 +10,15 @@ from fastapi.staticfiles import StaticFiles
 
 from .discovery import discover
 from .control import Pixoo, PixooError
+from .slideshow import Slideshow
 from . import animate, art
 
 STATIC = os.path.join(os.path.dirname(__file__), "static")
 
 app = FastAPI()
 _LOCAL_HOSTS = {"127.0.0.1", "localhost", "::1"}
+_show: Slideshow | None = None
+_IDLE_SHOW = {"running": False, "year": None, "current": None, "queued": 0, "error": None}
 
 
 def _origin_ok(origin: str | None) -> bool:
@@ -90,6 +93,36 @@ def api_art_random(year: int = 2024):
     except Exception as e:
         raise HTTPException(502, f"16colo.rs pick failed: {e}")
     return {"pack": pack, "file": file, "year": year}
+
+
+@app.post("/api/slideshow/start")
+def api_show_start(body: dict = Body(...)):
+    global _show
+    if _show and _show.status()["running"]:
+        _show.stop()
+    _show = Slideshow(ip=body["ip"], year=int(body.get("year", 2024)),
+                      speed=int(body.get("speed", 60)), hold=int(body.get("hold", 30)),
+                      target=int(body.get("buffer", 10)))
+    _show.start()
+    return _show.status()
+
+
+@app.post("/api/slideshow/stop")
+def api_show_stop():
+    if _show:
+        _show.stop()
+    return {"running": False}
+
+
+@app.get("/api/slideshow/status")
+def api_show_status():
+    return _show.status() if _show else dict(_IDLE_SHOW)
+
+
+@app.on_event("shutdown")
+def _stop_show_on_shutdown():
+    if _show:
+        _show.stop()
 
 
 @app.post("/api/art")

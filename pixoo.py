@@ -76,18 +76,22 @@ def main():
             print(f"scrolled {args.pack}/{args.file} ({len(frames)} frames)")
         elif args.action == "slideshow":
             import time
-            print(f"slideshow: random pieces from {args.year}, {args.hold}s each. Ctrl-C to stop.")
+            from divroom.slideshow import Slideshow
+            show = Slideshow(ip=dev.ip, year=args.year, speed=args.speed, hold=args.hold).start()
+            print(f"slideshow: random pieces from {args.year}, {args.hold}s each, "
+                  f"prefetching 10. Ctrl-C to stop.")
+            last = None
             try:
                 while True:
-                    try:
-                        pack, file = art.random_piece(args.year)
-                        dev.send_frames(art.build(pack, file), speed_ms=args.speed)
-                        print(f"▶ {pack}/{file}")
-                    except Exception as e:
-                        print("skip:", e)
-                    time.sleep(args.hold)
+                    st = show.status()
+                    if st["current"] and st["current"] != last:
+                        last = st["current"]
+                        print(f"▶ {last['pack']}/{last['file']}  ({st['queued']} ready)")
+                    if st["error"]:
+                        print("note:", st["error"])
+                    time.sleep(1)
             except KeyboardInterrupt:
-                print("\nstopped")
+                show.stop(); print("\nstopped")
         elif args.action == "info":
             for k, v in dev.cmd("Channel/GetAllConf").items():
                 print(f"{k}: {v}")

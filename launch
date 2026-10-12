@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# launch — start the Divroom dashboard on localhost and open the browser.
+set -euo pipefail
+cd "$(dirname "$0")"
+PORT="${PORT:-8000}"
+( sleep 1; open "http://127.0.0.1:${PORT}" ) &
+exec .venv/bin/python -m uvicorn divroom.server:app --host 127.0.0.1 --port "$PORT"

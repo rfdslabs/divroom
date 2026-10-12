@@ -40,6 +40,7 @@ button:disabled { opacity: .4; cursor: default; }
   min-height: 16px; }
 .ctlout.err { color: var(--accent); }
 .hint { color: var(--mut); font-size: 11px; align-self: center; }
+.grid .wide { grid-column: 1 / -1; }
 .artrow { display: flex; gap: 8px; }
 .artrow input { flex: 1; min-width: 0; }
 @media (max-width: 720px) { .device { margin-left: 0; width: 100%; } }

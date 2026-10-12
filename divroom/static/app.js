@@ -56,4 +56,38 @@ async function control(act) {
 }
 document.querySelectorAll("[data-act]").forEach(b => b.onclick = () => control(b.dataset.act));
 
+// --- random slideshow: pick a piece from the year, scroll it, re-pick every 30s
+const SHOW_INTERVAL_MS = 30000;
+let showTimer = null;
+
+async function pickAndPlay() {
+  const stat = $("showstat");
+  const year = $("year").value || 2024;
+  stat.textContent = "picking…";
+  try {
+    const pick = await (await fetch(`/api/art/random?year=${encodeURIComponent(year)}`)).json();
+    if (pick.detail) { stat.textContent = "pick failed: " + pick.detail; return; }
+    const body = { ip: deviceIp, pack: pick.pack, file: pick.file, frames: 60, speed: +$("speed").value };
+    const r = await fetch("/api/art", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const d = await r.json();
+    stat.textContent = r.ok ? `▶ ${pick.pack} / ${pick.file}` : ("error: " + (d.detail || r.status));
+  } catch (e) { stat.textContent = String(e); }
+}
+
+function setShowRunning(on) {
+  $("startshow").disabled = on; $("stopshow").disabled = !on;
+}
+$("startshow").onclick = () => {
+  if (showTimer || !deviceIp) return;
+  setShowRunning(true);
+  pickAndPlay();
+  showTimer = setInterval(pickAndPlay, SHOW_INTERVAL_MS);
+};
+$("stopshow").onclick = () => {
+  clearInterval(showTimer); showTimer = null;
+  setShowRunning(false);
+  $("showstat").textContent = "stopped";
+};
+
 loadDevice();

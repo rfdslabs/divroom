@@ -70,6 +70,22 @@ def test_art_pushes_frames(client, monkeypatch):
     assert sent["n"] == 10 and sent["speed"] == 60
 
 
+def test_art_random_returns_pick(client, monkeypatch):
+    monkeypatch.setattr("divroom.art.random_piece",
+                        lambda year, **k: ("fire-46", "AK-KING.ANS"))
+    r = client.get("/api/art/random?year=2024")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["pack"] == "fire-46" and body["file"] == "AK-KING.ANS" and body["year"] == 2024
+
+
+def test_art_random_failure_returns_502(client, monkeypatch):
+    def boom(year, **k): raise LookupError("no packs")
+    monkeypatch.setattr("divroom.art.random_piece", boom)
+    r = client.get("/api/art/random?year=2024")
+    assert r.status_code == 502
+
+
 def test_art_fetch_failure_returns_502(client, monkeypatch):
     import requests
     def boom(*a, **k): raise requests.RequestException("not found")

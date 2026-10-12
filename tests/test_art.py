@@ -45,6 +45,48 @@ def test_pan_small_image_is_padded_to_window():
     assert frames[0].tobytes() == frames[-1].tobytes()
 
 
+PACK_HTML = ('<a href="/pack/advent24/">x</a> <a href="/pack/fire-39/">y</a> '
+             '<a href="/pack/advent24/">dup</a> <a href="/other/">no</a>')
+
+PIECE_HTML = """
+<a href="/pack/fire-46/%2346_FIRE.ANS">hash</a>
+<a href="/pack/fire-46/AK-KING.ANS">ak</a>
+<a href="/pack/fire-46/x1/AK-KING.ANS.png">render</a>
+<a href="/pack/fire-46/tn/AK-KING.ANS.png">thumb</a>
+<a href="/pack/fire-46/FILE_ID.DIZ">diz</a>
+<a href="/pack/fire-46/0797SHIT.NFO">nfo</a>
+"""
+
+
+def test_pack_names_parses_and_dedups():
+    assert art._pack_names(PACK_HTML) == ["advent24", "fire-39"]
+
+
+def test_piece_files_keeps_ans_decoded_excludes_renders():
+    files = art._piece_files(PIECE_HTML, "fire-46")
+    assert "AK-KING.ANS" in files
+    assert "#46_FIRE.ANS" in files                       # %23 decoded
+    assert all(f.lower().endswith(".ans") for f in files)
+    assert not any(".png" in f.lower() or "/" in f for f in files)
+
+
+def test_random_piece_deterministic_with_seed(monkeypatch):
+    import random
+    monkeypatch.setattr(art, "list_packs", lambda year, timeout=15: ["p1", "p2", "p3"])
+    monkeypatch.setattr(art, "list_pieces", lambda pack, timeout=15: [f"{pack}-a.ANS", f"{pack}-b.ANS"])
+    a = art.random_piece(2024, rng=random.Random(42))
+    b = art.random_piece(2024, rng=random.Random(42))
+    assert a == b and a[0] in {"p1", "p2", "p3"} and a[1].lower().endswith(".ans")
+
+
+def test_random_piece_skips_empty_packs(monkeypatch):
+    import random
+    monkeypatch.setattr(art, "list_packs", lambda year, timeout=15: ["empty", "good"])
+    monkeypatch.setattr(art, "list_pieces",
+                        lambda pack, timeout=15: [] if pack == "empty" else ["good-x.ANS"])
+    assert art.random_piece(2024, rng=random.Random(0)) == ("good", "good-x.ANS")
+
+
 def test_build_fetches_then_pans(monkeypatch):
     monkeypatch.setattr(art, "fetch_piece", lambda pack, file, view="x1", timeout=15: _tall())
     frames = art.build("fire-46", "AK-KING.ANS", frames=8)

@@ -55,6 +55,13 @@
     <button data-act="art">Scroll art</button>
     <span class="hint">pans a 64×64 window down the piece · uses Speed</span>
 
+    <label>Slideshow year <input type="number" id="year" value="2024" min="1990" max="2026"></label>
+    <span class="artrow">
+      <button id="startshow">Start</button>
+      <button id="stopshow" disabled>Stop</button>
+    </span>
+    <span class="hint wide" id="showstat">random piece from that year, auto-advancing every 30s</span>
+
     <label class="wide">Raw command (JSON)
       <input type="text" id="raw" placeholder='{"Command":"Channel/GetAllConf"}'></label>
     <button data-act="raw">Send raw</button>

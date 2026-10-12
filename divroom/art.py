@@ -8,7 +8,9 @@ motion is a vertical scroll: fit the width to the panel, then ping-pong a
 64x64 window down the piece and back for a seamless loop.
 """
 import io
-from urllib.parse import quote
+import random as _random
+import re
+from urllib.parse import quote, unquote
 
 import requests
 from PIL import Image
@@ -62,3 +64,52 @@ def pan_frames(img, frames=60, width=SIZE):
 def build(pack, file, frames=60, view="x1", width=SIZE, timeout=15):
     img = fetch_piece(pack, file, view=view, timeout=timeout)
     return pan_frames(img, frames=frames, width=width)
+
+
+# --- random slideshow picking ------------------------------------------------
+
+def _get_text(url, timeout=15):
+    r = requests.get(url, headers=_UA, timeout=timeout)
+    r.raise_for_status()
+    return r.text
+
+
+def _dedup(items):
+    seen, out = set(), []
+    for it in items:
+        if it not in seen:
+            seen.add(it); out.append(it)
+    return out
+
+
+def _pack_names(html):
+    return _dedup(re.findall(r'href="/pack/([^/"]+)/"', html))
+
+
+def _piece_files(html, pack):
+    # one path segment after the pack that ends in .ANS, so the x1/x2/tn/ PNG
+    # renders (which have another slash) and .NFO/.DIZ sidecars are excluded.
+    pat = rf'/pack/{re.escape(pack)}/([^"\'/<>\s]+?\.ANS)(?=["\'])'
+    return _dedup(unquote(f) for f in re.findall(pat, html, re.I))
+
+
+def list_packs(year, timeout=15):
+    return _pack_names(_get_text(f"{BASE}/year/{year}/", timeout=timeout))
+
+
+def list_pieces(pack, timeout=15):
+    return _piece_files(_get_text(f"{BASE}/pack/{pack}/", timeout=timeout), pack)
+
+
+def random_piece(year, rng=None, timeout=15):
+    """Pick a random (pack, file) from a year, skipping packs with no .ANS."""
+    rng = rng or _random
+    packs = list_packs(year, timeout=timeout)
+    if not packs:
+        raise LookupError(f"no packs for year {year}")
+    for _ in range(min(8, len(packs)) + 2):
+        pack = rng.choice(packs)
+        pieces = list_pieces(pack, timeout=timeout)
+        if pieces:
+            return pack, rng.choice(pieces)
+    raise LookupError(f"no renderable piece found in year {year}")

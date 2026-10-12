@@ -83,6 +83,15 @@ async def api_animate(name: str, body: dict = Body(default={})):
     return {"ok": True, "frames": len(frames)}
 
 
+@app.get("/api/art/random")
+def api_art_random(year: int = 2024):
+    try:
+        pack, file = art.random_piece(year)
+    except Exception as e:
+        raise HTTPException(502, f"16colo.rs pick failed: {e}")
+    return {"pack": pack, "file": file, "year": year}
+
+
 @app.post("/api/art")
 async def api_art(body: dict = Body(default={})):
     try:

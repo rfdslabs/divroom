@@ -41,6 +41,8 @@ def main():
     s.add_argument("--angle", type=int, default=0)
     s = sub.add_parser("art"); s.add_argument("pack"); s.add_argument("file")
     s.add_argument("--speed", type=int, default=100); s.add_argument("--frames", type=int, default=60)
+    s = sub.add_parser("slideshow"); s.add_argument("--year", type=int, default=2024)
+    s.add_argument("--hold", type=int, default=30); s.add_argument("--speed", type=int, default=60)
     sub.add_parser("info")
 
     args = p.parse_args()
@@ -72,6 +74,20 @@ def main():
             frames = art.build(args.pack, args.file, frames=args.frames)
             dev.send_frames(frames, speed_ms=args.speed)
             print(f"scrolled {args.pack}/{args.file} ({len(frames)} frames)")
+        elif args.action == "slideshow":
+            import time
+            print(f"slideshow: random pieces from {args.year}, {args.hold}s each. Ctrl-C to stop.")
+            try:
+                while True:
+                    try:
+                        pack, file = art.random_piece(args.year)
+                        dev.send_frames(art.build(pack, file), speed_ms=args.speed)
+                        print(f"▶ {pack}/{file}")
+                    except Exception as e:
+                        print("skip:", e)
+                    time.sleep(args.hold)
+            except KeyboardInterrupt:
+                print("\nstopped")
         elif args.action == "info":
             for k, v in dev.cmd("Channel/GetAllConf").items():
                 print(f"{k}: {v}")

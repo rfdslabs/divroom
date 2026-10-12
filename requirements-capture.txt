@@ -1,0 +1,3 @@
+# Optional: only needed for `pixoo.py sniff` (passive traffic observation).
+# The core control toolkit and the unit tests do NOT require scapy.
+scapy==2.6.1

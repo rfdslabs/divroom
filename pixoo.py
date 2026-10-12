@@ -43,6 +43,8 @@ def main():
     s.add_argument("--speed", type=int, default=100); s.add_argument("--frames", type=int, default=60)
     s = sub.add_parser("slideshow"); s.add_argument("--year", type=int, default=2024)
     s.add_argument("--hold", type=int, default=30); s.add_argument("--speed", type=int, default=60)
+    s = sub.add_parser("camera"); s.add_argument("--index", type=int, default=0)
+    s.add_argument("--fps", type=int, default=12)
     sub.add_parser("info")
 
     args = p.parse_args()
@@ -92,6 +94,24 @@ def main():
                     time.sleep(1)
             except KeyboardInterrupt:
                 show.stop(); print("\nstopped")
+        elif args.action == "camera":
+            import time
+            from divroom.camera import CameraStream, list_devices
+            cams = list_devices()
+            print("cameras:", ", ".join(f"[{d['index']}] {d['name']}" for d in cams) or "none found")
+            cam = CameraStream(ip=dev.ip, index=args.index, fps=args.fps).start()
+            print(f"streaming camera {args.index} → {dev.ip}. Ctrl-C to stop.")
+            try:
+                while True:
+                    st = cam.status()
+                    if st["error"]:
+                        print("\n" + st["error"]); break
+                    print(f"  {st['frames_sent']} frames · {st['fps']} fps   ", end="\r", flush=True)
+                    time.sleep(1)
+            except KeyboardInterrupt:
+                pass
+            finally:
+                cam.stop(); print("\nstopped")
         elif args.action == "info":
             for k, v in dev.cmd("Channel/GetAllConf").items():
                 print(f"{k}: {v}")

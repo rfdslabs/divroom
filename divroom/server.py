@@ -11,7 +11,8 @@ from fastapi.staticfiles import StaticFiles
 from .discovery import discover
 from .control import Pixoo, PixooError
 from .slideshow import Slideshow
-from . import animate, art
+from .camera import CameraStream
+from . import animate, art, camera
 
 STATIC = os.path.join(os.path.dirname(__file__), "static")
 
@@ -19,6 +20,8 @@ app = FastAPI()
 _LOCAL_HOSTS = {"127.0.0.1", "localhost", "::1"}
 _show: Slideshow | None = None
 _IDLE_SHOW = {"running": False, "year": None, "current": None, "queued": 0, "error": None}
+_cam: CameraStream | None = None
+_IDLE_CAM = {"running": False, "index": None, "frames_sent": 0, "fps": 0, "error": None}
 
 
 def _origin_ok(origin: str | None) -> bool:
@@ -119,10 +122,40 @@ def api_show_status():
     return _show.status() if _show else dict(_IDLE_SHOW)
 
 
+@app.get("/api/camera/devices")
+def api_cam_devices():
+    return camera.list_devices()
+
+
+@app.post("/api/camera/start")
+def api_cam_start(body: dict = Body(...)):
+    global _cam
+    if _cam and _cam.status()["running"]:
+        _cam.stop()
+    _cam = CameraStream(ip=body["ip"], index=int(body.get("index", 0)),
+                        fps=int(body.get("fps", 12)))
+    _cam.start()
+    return _cam.status()
+
+
+@app.post("/api/camera/stop")
+def api_cam_stop():
+    if _cam:
+        _cam.stop()
+    return {"running": False}
+
+
+@app.get("/api/camera/status")
+def api_cam_status():
+    return _cam.status() if _cam else dict(_IDLE_CAM)
+
+
 @app.on_event("shutdown")
 def _stop_show_on_shutdown():
     if _show:
         _show.stop()
+    if _cam:
+        _cam.stop()
 
 
 @app.post("/api/art")

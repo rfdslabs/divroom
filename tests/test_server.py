@@ -125,6 +125,37 @@ def test_slideshow_status_idle_when_never_started(client, monkeypatch):
     assert r.status_code == 200 and r.json()["running"] is False
 
 
+def test_camera_start_stop_status(client, monkeypatch):
+    import divroom.server as srv
+
+    class FakeCam:
+        def __init__(self, **kw): self.kw = kw; self._running = False
+        def start(self): self._running = True; return self
+        def stop(self): self._running = False
+        def status(self):
+            return {"running": self._running, "index": self.kw.get("index"),
+                    "frames_sent": 12, "fps": 6.0, "error": None}
+
+    monkeypatch.setattr(srv, "CameraStream", FakeCam)
+    srv._cam = None
+
+    r = client.post("/api/camera/start", json={"ip": "192.168.4.20", "index": 1})
+    assert r.status_code == 200 and r.json()["running"] is True and r.json()["index"] == 1
+
+    r = client.get("/api/camera/status")
+    assert r.status_code == 200 and r.json()["frames_sent"] == 12
+
+    r = client.post("/api/camera/stop")
+    assert r.status_code == 200 and r.json()["running"] is False
+
+
+def test_camera_devices_lists(client, monkeypatch):
+    monkeypatch.setattr("divroom.camera.list_devices",
+                        lambda: [{"index": 0, "name": "MacBook Pro Camera"}])
+    r = client.get("/api/camera/devices")
+    assert r.status_code == 200 and r.json()[0]["name"] == "MacBook Pro Camera"
+
+
 def test_control_image_rejects_non_image(client):
     r = client.post("/api/control/image",
                     data={"ip": "192.168.4.20"},

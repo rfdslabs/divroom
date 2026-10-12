@@ -62,6 +62,13 @@
     </span>
     <span class="hint wide" id="showstat">random pieces from that year · 30s each · prefetches 10 ahead · runs in the background</span>
 
+    <label>Camera <select id="cam"></select></label>
+    <span class="artrow">
+      <button id="camstart">Start</button>
+      <button id="camstop" disabled>Stop</button>
+    </span>
+    <span class="hint wide" id="camstat">live webcam → 64×64 · grant Camera access to the terminal running the server</span>
+
     <label class="wide">Raw command (JSON)
       <input type="text" id="raw" placeholder='{"Command":"Channel/GetAllConf"}'></label>
     <button data-act="raw">Send raw</button>

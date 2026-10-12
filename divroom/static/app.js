@@ -96,3 +96,51 @@ loadDevice();
 fetch("/api/slideshow/status").then(r => r.json()).then(s => {
   if (s.running) { setShowRunning(true); showPoll = setInterval(pollShow, 2000); pollShow(); }
 });
+
+// --- live camera → panel (server-side, ffmpeg avfoundation)
+let camPoll = null;
+
+function setCamRunning(on) { $("camstart").disabled = on; $("camstop").disabled = !on; }
+
+async function loadCams() {
+  try {
+    const devs = await (await fetch("/api/camera/devices")).json();
+    const sel = $("cam"); sel.innerHTML = "";
+    devs.forEach(d => {
+      const o = document.createElement("option");
+      o.value = d.index; o.textContent = `[${d.index}] ${d.name}`; sel.appendChild(o);
+    });
+    if (!devs.length) { sel.innerHTML = "<option value='0'>camera 0</option>"; }
+  } catch { $("cam").innerHTML = "<option value='0'>camera 0</option>"; }
+}
+
+async function pollCam() {
+  try {
+    const s = await (await fetch("/api/camera/status")).json();
+    setCamRunning(s.running);
+    if (s.running) {
+      $("camstat").textContent = s.error ? ("⚠ " + s.error) : `● live · ${s.frames_sent} frames · ${s.fps} fps`;
+    }
+  } catch {}
+}
+
+$("camstart").onclick = async () => {
+  if (!deviceIp) return;
+  setCamRunning(true);
+  $("camstat").textContent = "starting camera… (approve the macOS prompt if it appears)";
+  await fetch("/api/camera/start", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ip: deviceIp, index: +$("cam").value || 0, fps: 12 }) });
+  if (!camPoll) camPoll = setInterval(pollCam, 1500);
+  pollCam();
+};
+$("camstop").onclick = async () => {
+  await fetch("/api/camera/stop", { method: "POST" });
+  clearInterval(camPoll); camPoll = null;
+  setCamRunning(false); $("camstat").textContent = "stopped";
+};
+
+loadCams();
+fetch("/api/camera/status").then(r => r.json()).then(s => {
+  if (s.running) { setCamRunning(true); camPoll = setInterval(pollCam, 1500); pollCam(); }
+});

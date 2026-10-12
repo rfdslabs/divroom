@@ -6,6 +6,7 @@ import sys
 
 from divroom.control import Pixoo, PixooError, CHANNELS
 from divroom.discovery import discover
+from divroom import animate
 
 
 def _pick_ip(explicit):
@@ -33,6 +34,11 @@ def main():
     s = sub.add_parser("brightness"); s.add_argument("level", type=int)
     s = sub.add_parser("channel"); s.add_argument("name", choices=CHANNELS)
     s = sub.add_parser("screen"); s.add_argument("state", choices=["on", "off"])
+    s = sub.add_parser("animate"); s.add_argument("name", choices=animate.ANIMATIONS)
+    s.add_argument("--speed", type=int, default=100); s.add_argument("--frames", type=int, default=30)
+    s.add_argument("--color", default="#ffffff"); s.add_argument("--color2", default="#00e0ff")
+    s = sub.add_parser("gradient"); s.add_argument("a"); s.add_argument("b")
+    s.add_argument("--angle", type=int, default=0)
     sub.add_parser("info")
 
     args = p.parse_args()
@@ -52,6 +58,14 @@ def main():
             dev.channel(args.name)
         elif args.action == "screen":
             dev.screen(args.state == "on")
+        elif args.action == "animate":
+            frames = animate.build(args.name, frames=args.frames,
+                                   color=args.color, a=args.color, b=args.color2)
+            dev.send_frames(frames, speed_ms=args.speed)
+            print(f"played {args.name} ({len(frames)} frames)")
+        elif args.action == "gradient":
+            dev.send_frames(animate.build("gradient", a=args.a, b=args.b, angle=args.angle))
+            print("sent gradient")
         elif args.action == "info":
             for k, v in dev.cmd("Channel/GetAllConf").items():
                 print(f"{k}: {v}")

@@ -18,6 +18,9 @@
     <label>Color <input type="color" id="color" value="#ff0080"></label>
     <button data-act="color">Send color</button>
 
+    <label>Color B <input type="color" id="color2" value="#00e0ff"></label>
+    <button data-act="gradient">Send gradient</button>
+
     <label>Text <input type="text" id="text" placeholder="BRB" maxlength="64"></label>
     <button data-act="text">Send text</button>
 
@@ -35,6 +38,14 @@
 
     <label>Image/GIF <input type="file" id="image" accept="image/*"></label>
     <button data-act="image">Upload</button>
+
+    <label>Animation
+      <select id="anim"><option>rainbow</option><option>plasma</option>
+        <option>sweep</option><option>pulse</option></select></label>
+    <button data-act="animate">Play</button>
+
+    <label>Speed (ms/frame) <input type="range" id="speed" min="20" max="300" value="100"></label>
+    <span class="hint">uses Color + Color B for sweep/pulse</span>
 
     <label class="wide">Raw command (JSON)
       <input type="text" id="raw" placeholder='{"Command":"Channel/GetAllConf"}'></label>

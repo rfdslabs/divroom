@@ -10,6 +10,7 @@ from fastapi.staticfiles import StaticFiles
 
 from .discovery import discover
 from .control import Pixoo, PixooError
+from . import animate
 
 STATIC = os.path.join(os.path.dirname(__file__), "static")
 
@@ -66,6 +67,20 @@ async def api_control_image(ip: str = Form(...), file: UploadFile = File(...)):
     finally:
         os.unlink(tmp.name)
     return {"ok": True, "frames": count}
+
+
+@app.post("/api/animate/{name}")
+async def api_animate(name: str, body: dict = Body(default={})):
+    opts = {k: v for k, v in body.items() if k not in ("ip", "speed")}
+    try:
+        frames = animate.build(name, **opts)
+    except KeyError:
+        raise HTTPException(404, f"unknown animation {name}")
+    try:
+        Pixoo(body.get("ip", "")).send_frames(frames, speed_ms=int(body.get("speed", 100)))
+    except PixooError as e:
+        raise HTTPException(502, str(e))
+    return {"ok": True, "frames": len(frames)}
 
 
 @app.post("/api/control/{action}")

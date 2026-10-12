@@ -32,6 +32,31 @@ def test_control_unreachable_returns_502(client, monkeypatch):
     assert r.status_code == 502
 
 
+def test_animate_pushes_frames(client, monkeypatch):
+    sent = {}
+    def fake_send(self, frames, speed_ms=100):
+        sent["n"] = len(frames); sent["speed"] = speed_ms
+    monkeypatch.setattr("divroom.control.Pixoo.send_frames", fake_send)
+    r = client.post("/api/animate/rainbow",
+                    json={"ip": "192.168.4.20", "frames": 6, "speed": 80})
+    assert r.status_code == 200
+    assert sent["n"] == 6 and sent["speed"] == 80
+
+
+def test_animate_unknown_returns_404(client, monkeypatch):
+    monkeypatch.setattr("divroom.control.Pixoo.send_frames", lambda self, frames, speed_ms=100: None)
+    r = client.post("/api/animate/nope", json={"ip": "192.168.4.20"})
+    assert r.status_code == 404
+
+
+def test_animate_device_error_returns_502(client, monkeypatch):
+    from divroom.control import PixooError
+    def boom(self, frames, speed_ms=100): raise PixooError("unreachable")
+    monkeypatch.setattr("divroom.control.Pixoo.send_frames", boom)
+    r = client.post("/api/animate/plasma", json={"ip": "192.168.4.20", "frames": 4})
+    assert r.status_code == 502
+
+
 def test_control_image_rejects_non_image(client):
     r = client.post("/api/control/image",
                     data={"ip": "192.168.4.20"},

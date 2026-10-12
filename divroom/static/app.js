@@ -22,6 +22,16 @@ async function control(act) {
       if (!f) { out.textContent = "pick a file first"; return; }
       const fd = new FormData(); fd.append("ip", deviceIp); fd.append("file", f);
       r = await fetch("/api/control/image", { method: "POST", body: fd });
+    } else if (act === "animate") {
+      const name = $("anim").value;
+      const body = { ip: deviceIp, frames: 30, speed: +$("speed").value,
+                     a: $("color").value, b: $("color2").value, color: $("color").value };
+      r = await fetch(`/api/animate/${name}`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    } else if (act === "gradient") {
+      const body = { ip: deviceIp, a: $("color").value, b: $("color2").value, angle: 0 };
+      r = await fetch("/api/animate/gradient", {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     } else {
       const body = { ip: deviceIp };
       if (act === "color") body.hex = $("color").value.slice(1);

@@ -44,7 +44,7 @@ def main():
     s = sub.add_parser("slideshow"); s.add_argument("--year", type=int, default=2024)
     s.add_argument("--hold", type=int, default=30); s.add_argument("--speed", type=int, default=60)
     s = sub.add_parser("camera"); s.add_argument("--index", type=int, default=0)
-    s.add_argument("--fps", type=int, default=12)
+    s.add_argument("--fps", type=int, default=None, help="force capture fps (default: camera's native mode)")
     sub.add_parser("info")
 
     args = p.parse_args()

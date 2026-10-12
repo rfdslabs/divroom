@@ -25,6 +25,18 @@ def test_parse_devices_video_only_excludes_screen_and_audio():
     assert "rfds Microphone" not in names                  # audio section dropped
 
 
+def test_ffmpeg_cmd_auto_omits_mode():
+    cmd = camera._ffmpeg_cmd(0, None, None)
+    assert "-framerate" not in cmd and "-video_size" not in cmd
+    assert cmd[cmd.index("-i") + 1] == "0"
+
+
+def test_ffmpeg_cmd_includes_mode_when_given():
+    cmd = camera._ffmpeg_cmd(1, 30, "640x480")
+    assert cmd[cmd.index("-framerate") + 1] == "30"
+    assert cmd[cmd.index("-video_size") + 1] == "640x480"
+
+
 def test_to_panel_center_crops_to_square_64():
     out = camera.to_panel(Image.new("RGB", (100, 60), (10, 20, 30)))
     assert out.size == (SIZE, SIZE) and out.mode == "RGB"

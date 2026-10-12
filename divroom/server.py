@@ -132,8 +132,9 @@ def api_cam_start(body: dict = Body(...)):
     global _cam
     if _cam and _cam.status()["running"]:
         _cam.stop()
+    fps = body.get("fps")
     _cam = CameraStream(ip=body["ip"], index=int(body.get("index", 0)),
-                        fps=int(body.get("fps", 12)))
+                        fps=int(fps) if fps else None)
     _cam.start()
     return _cam.status()
 

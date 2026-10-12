@@ -61,16 +61,22 @@ def list_devices(timeout=10):
         return []
 
 
-def _ffmpeg_cmd(index, fps, video_size):
-    return ["ffmpeg", "-hide_banner", "-loglevel", "error",
-            "-f", "avfoundation", "-framerate", str(fps),
-            "-video_size", video_size, "-i", str(index),
+def _ffmpeg_cmd(index, fps=None, video_size=None):
+    # fps/video_size default to the device's own mode — forcing an unsupported
+    # one makes avfoundation refuse to open (modes differ per camera).
+    cmd = ["ffmpeg", "-hide_banner", "-loglevel", "error", "-f", "avfoundation"]
+    if fps:
+        cmd += ["-framerate", str(fps)]
+    if video_size:
+        cmd += ["-video_size", video_size]
+    cmd += ["-i", str(index),
             "-vf", rf"crop=min(iw\,ih):min(iw\,ih),scale={SIZE}:{SIZE}",
             "-pix_fmt", "rgb24", "-f", "rawvideo", "-"]
+    return cmd
 
 
 class CameraStream:
-    def __init__(self, ip, index=0, fps=12, video_size="640x480", speed=100,
+    def __init__(self, ip, index=0, fps=None, video_size=None, speed=100,
                  player=None, source=None, first_frame_timeout=6):
         self.ip = ip
         self.index = index

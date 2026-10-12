@@ -130,7 +130,7 @@ $("camstart").onclick = async () => {
   $("camstat").textContent = "starting camera… (approve the macOS prompt if it appears)";
   await fetch("/api/camera/start", {
     method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ ip: deviceIp, index: +$("cam").value || 0, fps: 12 }) });
+    body: JSON.stringify({ ip: deviceIp, index: +$("cam").value || 0 }) });
   if (!camPoll) camPoll = setInterval(pollCam, 1500);
   pollCam();
 };

@@ -37,6 +37,34 @@ def test_ffmpeg_cmd_includes_mode_when_given():
     assert cmd[cmd.index("-video_size") + 1] == "640x480"
 
 
+MODES_TEXT = """
+[in#0 @ 0x1] Selected framerate (99999.00) is not supported by the device.
+[in#0 @ 0x1] Supported modes:
+[in#0 @ 0x1]   640x480@[15.000000 30.000000]fps
+[in#0 @ 0x1]   1280x720@[15.000000 30.000000]fps
+[in#0 @ 0x1]   1760x1328@[15.000000 30.000000]fps
+"""
+
+
+def test_parse_modes():
+    modes = camera._parse_modes(MODES_TEXT)
+    assert (640, 480, 15.0, 30.0) in modes
+    assert len(modes) == 3
+
+
+def test_pick_mode_smallest_at_30():
+    size, fps = camera.pick_mode(camera._parse_modes(MODES_TEXT))
+    assert size == "640x480" and fps == 30
+
+
+def test_pick_mode_uses_max_when_30_out_of_range():
+    assert camera.pick_mode([(1920, 1440, 1.0, 25.0)]) == ("1920x1440", 25)
+
+
+def test_pick_mode_empty_is_none():
+    assert camera.pick_mode([]) is None
+
+
 def test_to_panel_center_crops_to_square_64():
     out = camera.to_panel(Image.new("RGB", (100, 60), (10, 20, 30)))
     assert out.size == (SIZE, SIZE) and out.mode == "RGB"

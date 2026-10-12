@@ -61,6 +61,34 @@ def list_devices(timeout=10):
         return []
 
 
+_MODE_RE = re.compile(r"(\d+)x(\d+)@\[([\d.]+)\s+([\d.]+)\]fps")
+
+
+def _parse_modes(text):
+    return [(int(w), int(h), float(a), float(b))
+            for w, h, a, b in _MODE_RE.findall(text)]
+
+
+def pick_mode(modes):
+    """Smallest resolution; 30fps if supported there, else that mode's max."""
+    if not modes:
+        return None
+    w, h, fmin, fmax = min(modes, key=lambda m: m[0] * m[1])
+    fps = 30 if fmin <= 30 <= fmax else int(fmax)
+    return f"{w}x{h}", fps
+
+
+def probe_modes(index, timeout=8):
+    """avfoundation lists a device's modes only when asked for an impossible one."""
+    try:
+        p = subprocess.run(["ffmpeg", "-hide_banner", "-f", "avfoundation",
+                            "-framerate", "99999", "-i", str(index)],
+                           capture_output=True, text=True, timeout=timeout)
+        return _parse_modes(p.stderr)
+    except Exception:
+        return []
+
+
 def _ffmpeg_cmd(index, fps=None, video_size=None):
     # fps/video_size default to the device's own mode — forcing an unsupported
     # one makes avfoundation refuse to open (modes differ per camera).
@@ -102,8 +130,21 @@ class CameraStream:
     def _iter_source(self):
         return iter(self._source) if self._source is not None else self._ffmpeg_frames()
 
+    def _resolve_mode(self):
+        fps, size = self.fps, self.video_size
+        if fps and size:
+            return fps, size
+        picked = pick_mode(probe_modes(self.index))
+        if picked:
+            size = size or picked[0]
+            fps = fps or picked[1]
+        else:
+            fps = fps or 30  # avfoundation's 29.97 default isn't an exact-match mode
+        return fps, size
+
     def _ffmpeg_frames(self):
-        self._proc = subprocess.Popen(_ffmpeg_cmd(self.index, self.fps, self.video_size),
+        fps, size = self._resolve_mode()
+        self._proc = subprocess.Popen(_ffmpeg_cmd(self.index, fps, size),
                                       stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         while not self._stop.is_set():
             buf = self._proc.stdout.read(FRAME_BYTES)

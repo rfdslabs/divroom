@@ -28,6 +28,12 @@ async function control(act) {
                      a: $("color").value, b: $("color2").value, color: $("color").value };
       r = await fetch(`/api/animate/${name}`, {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    } else if (act === "art") {
+      const pack = $("artpack").value.trim(), file = $("artfile").value.trim();
+      if (!pack || !file) { out.textContent = "enter a pack and a file"; return; }
+      const body = { ip: deviceIp, pack, file, frames: 60, speed: +$("speed").value };
+      r = await fetch("/api/art", {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     } else if (act === "gradient") {
       const body = { ip: deviceIp, a: $("color").value, b: $("color2").value, angle: 0 };
       r = await fetch("/api/animate/gradient", {

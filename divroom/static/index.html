@@ -47,6 +47,14 @@
     <label>Speed (ms/frame) <input type="range" id="speed" min="20" max="300" value="100"></label>
     <span class="hint">uses Color + Color B for sweep/pulse</span>
 
+    <label class="wide">16colo.rs art
+      <span class="artrow">
+        <input type="text" id="artpack" placeholder="pack e.g. fire-46">
+        <input type="text" id="artfile" placeholder="file e.g. AK-KING.ANS">
+      </span></label>
+    <button data-act="art">Scroll art</button>
+    <span class="hint">pans a 64×64 window down the piece · uses Speed</span>
+
     <label class="wide">Raw command (JSON)
       <input type="text" id="raw" placeholder='{"Command":"Channel/GetAllConf"}'></label>
     <button data-act="raw">Send raw</button>

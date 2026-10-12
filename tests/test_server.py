@@ -57,6 +57,27 @@ def test_animate_device_error_returns_502(client, monkeypatch):
     assert r.status_code == 502
 
 
+def test_art_pushes_frames(client, monkeypatch):
+    from PIL import Image
+    monkeypatch.setattr("divroom.art.fetch_piece",
+                        lambda *a, **k: Image.new("RGB", (64, 256)))
+    sent = {}
+    monkeypatch.setattr("divroom.control.Pixoo.send_frames",
+                        lambda self, frames, speed_ms=100: sent.update(n=len(frames), speed=speed_ms))
+    r = client.post("/api/art", json={"ip": "192.168.4.20", "pack": "fire-46",
+                                      "file": "AK-KING.ANS", "frames": 10, "speed": 60})
+    assert r.status_code == 200
+    assert sent["n"] == 10 and sent["speed"] == 60
+
+
+def test_art_fetch_failure_returns_502(client, monkeypatch):
+    import requests
+    def boom(*a, **k): raise requests.RequestException("not found")
+    monkeypatch.setattr("divroom.art.fetch_piece", boom)
+    r = client.post("/api/art", json={"ip": "192.168.4.20", "pack": "x", "file": "y.ANS"})
+    assert r.status_code == 502
+
+
 def test_control_image_rejects_non_image(client):
     r = client.post("/api/control/image",
                     data={"ip": "192.168.4.20"},

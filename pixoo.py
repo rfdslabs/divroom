@@ -6,7 +6,7 @@ import sys
 
 from divroom.control import Pixoo, PixooError, CHANNELS
 from divroom.discovery import discover
-from divroom import animate
+from divroom import animate, art
 
 
 def _pick_ip(explicit):
@@ -39,6 +39,8 @@ def main():
     s.add_argument("--color", default="#ffffff"); s.add_argument("--color2", default="#00e0ff")
     s = sub.add_parser("gradient"); s.add_argument("a"); s.add_argument("b")
     s.add_argument("--angle", type=int, default=0)
+    s = sub.add_parser("art"); s.add_argument("pack"); s.add_argument("file")
+    s.add_argument("--speed", type=int, default=100); s.add_argument("--frames", type=int, default=60)
     sub.add_parser("info")
 
     args = p.parse_args()
@@ -66,6 +68,10 @@ def main():
         elif args.action == "gradient":
             dev.send_frames(animate.build("gradient", a=args.a, b=args.b, angle=args.angle))
             print("sent gradient")
+        elif args.action == "art":
+            frames = art.build(args.pack, args.file, frames=args.frames)
+            dev.send_frames(frames, speed_ms=args.speed)
+            print(f"scrolled {args.pack}/{args.file} ({len(frames)} frames)")
         elif args.action == "info":
             for k, v in dev.cmd("Channel/GetAllConf").items():
                 print(f"{k}: {v}")

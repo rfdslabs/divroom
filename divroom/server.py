@@ -10,7 +10,7 @@ from fastapi.staticfiles import StaticFiles
 
 from .discovery import discover
 from .control import Pixoo, PixooError
-from . import animate
+from . import animate, art
 
 STATIC = os.path.join(os.path.dirname(__file__), "static")
 
@@ -76,6 +76,21 @@ async def api_animate(name: str, body: dict = Body(default={})):
         frames = animate.build(name, **opts)
     except KeyError:
         raise HTTPException(404, f"unknown animation {name}")
+    try:
+        Pixoo(body.get("ip", "")).send_frames(frames, speed_ms=int(body.get("speed", 100)))
+    except PixooError as e:
+        raise HTTPException(502, str(e))
+    return {"ok": True, "frames": len(frames)}
+
+
+@app.post("/api/art")
+async def api_art(body: dict = Body(default={})):
+    try:
+        frames = art.build(body["pack"], body["file"],
+                           frames=int(body.get("frames", 60)),
+                           view=body.get("view", "x1"))
+    except Exception as e:  # network / decode / missing piece
+        raise HTTPException(502, f"16colo.rs fetch failed: {e}")
     try:
         Pixoo(body.get("ip", "")).send_frames(frames, speed_ms=int(body.get("speed", 100)))
     except PixooError as e:

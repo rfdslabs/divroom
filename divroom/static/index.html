@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Divroom</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header>
+  <div class="brand">Divroom <span class="sub">Pixoo 64 workbench</span></div>
+  <div class="device" id="device">searching for device…</div>
+  <div class="capctl">
+    <span id="dot" class="dot off"></span>
+    <span id="pkts">0 pkts</span>
+    <button id="start">Start capture</button>
+    <button id="stop" disabled>Stop</button>
+  </div>
+</header>
+
+<div id="status" class="status hidden"></div>
+
+<main>
+  <section class="panel">
+    <h2>Live packets</h2>
+    <ul id="packets" class="rows"></ul>
+  </section>
+  <section class="panel">
+    <h2>MQTT decode</h2>
+    <div id="privacy" class="privacy hidden">⚠ Sys/SetConf leaked coordinates in cleartext:
+      <span id="coords"></span></div>
+    <ul id="mqtt" class="rows"></ul>
+  </section>
+</main>
+
+<section class="controls">
+  <h2>Control <span class="sub">local HTTP API · 127.0.0.1 only</span></h2>
+  <div class="grid">
+    <label>Color <input type="color" id="color" value="#ff0080"></label>
+    <button data-act="color">Send color</button>
+
+    <label>Text <input type="text" id="text" placeholder="BRB" maxlength="64"></label>
+    <button data-act="text">Send text</button>
+
+    <label>Brightness <input type="range" id="bright" min="0" max="100" value="60"></label>
+    <button data-act="brightness">Set</button>
+
+    <label>Channel
+      <select id="channel"><option>faces</option><option>cloud</option>
+        <option>visualizer</option><option>custom</option></select></label>
+    <button data-act="channel">Switch</button>
+
+    <label>Screen
+      <select id="screen"><option value="on">on</option><option value="off">off</option></select></label>
+    <button data-act="screen">Apply</button>
+
+    <label>Image/GIF <input type="file" id="image" accept="image/*"></label>
+    <button data-act="image">Upload</button>
+
+    <label class="wide">Raw command (JSON)
+      <input type="text" id="raw" placeholder='{"Command":"Channel/GetAllConf"}'></label>
+    <button data-act="raw">Send raw</button>
+  </div>
+  <div id="ctlout" class="ctlout"></div>
+</section>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

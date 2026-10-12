@@ -31,3 +31,18 @@ def test_control_image_rejects_non_image(client):
                     data={"ip": "192.168.4.20"},
                     files={"file": ("x.txt", io.BytesIO(b"not an image"), "text/plain")})
     assert r.status_code == 400
+
+
+def test_rejects_foreign_origin(client):
+    r = client.post("/api/capture/stop", headers={"origin": "http://evil.example"})
+    assert r.status_code == 403
+
+
+def test_allows_localhost_origin(client):
+    r = client.post("/api/capture/stop", headers={"origin": "http://127.0.0.1:8000"})
+    assert r.status_code == 200
+
+
+def test_allows_no_origin(client):
+    r = client.post("/api/capture/stop")
+    assert r.status_code == 200

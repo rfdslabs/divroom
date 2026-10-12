@@ -41,3 +41,15 @@ def test_decode_pcap_recovers_known_commands():
     setconf = next(e for e in events if e.command == "Sys/SetConf")
     assert setconf.json["Latitude"] == 28.1
     assert setconf.json["Longitude"] == -82.7
+
+
+def test_decode_skips_interleaved_control_packets():
+    pub = _publish_frame(b"divoom/2/1/state", b'{"Command":"Device/Hearbeat"}')
+    pingresp = bytes([0xD0, 0x00])   # non-PUBLISH, remaining length 0
+    pingreq = bytes([0xC0, 0x00])
+    # control packet FIRST, then a PUBLISH
+    evs = decode_mqtt(pingresp + pub)
+    assert [e.command for e in evs] == ["Device/Hearbeat"]
+    # PUBLISH, interleaved control, PUBLISH
+    evs2 = decode_mqtt(pub + pingreq + pub)
+    assert [e.command for e in evs2] == ["Device/Hearbeat", "Device/Hearbeat"]

@@ -3,9 +3,11 @@ import asyncio
 import os
 import tempfile
 
+from urllib.parse import urlparse
+
 from fastapi import (FastAPI, WebSocket, WebSocketDisconnect, UploadFile,
                      Form, File, Body, HTTPException)
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from .discovery import discover
@@ -17,6 +19,28 @@ IFACE = os.environ.get("PIXOO_IFACE", "en0")
 STATIC = os.path.join(os.path.dirname(__file__), "static")
 
 app = FastAPI()
+_LOCAL_HOSTS = {"127.0.0.1", "localhost", "::1"}
+
+
+def _origin_ok(origin: str | None) -> bool:
+    # No Origin (curl, same-process tools) is allowed; a browser cross-site
+    # request carries a foreign Origin and is rejected. Any port on localhost ok.
+    if not origin:
+        return True
+    try:
+        return urlparse(origin).hostname in _LOCAL_HOSTS
+    except Exception:
+        return False
+
+
+@app.middleware("http")
+async def _origin_guard(request, call_next):
+    if request.method in ("POST", "PUT", "DELETE", "PATCH"):
+        if not _origin_ok(request.headers.get("origin")):
+            return JSONResponse(status_code=403, content={"detail": "bad origin"})
+    return await call_next(request)
+
+
 _clients: set[WebSocket] = set()
 _capture: Capture | None = None
 _loop: asyncio.AbstractEventLoop | None = None
@@ -129,6 +153,9 @@ async def api_control(action: str, body: dict = Body(default={})):
 
 @app.websocket("/ws")
 async def ws(websocket: WebSocket):
+    if not _origin_ok(websocket.headers.get("origin")):
+        await websocket.close(code=1008)  # policy violation
+        return
     await websocket.accept()
     _clients.add(websocket)
     try:

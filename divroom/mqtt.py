@@ -43,13 +43,13 @@ def decode_mqtt(payload):
     i, n = 0, len(payload)
     while i < n:
         b = payload[i]
-        if (b & 0xF0) != 0x30:  # only QoS0 PUBLISH
-            break
         rem, j = _remaining_length(payload, i + 1)
         if rem is None or j + rem > n:
             break
         frame = payload[j:j + rem]
         i = j + rem
+        if (b & 0xF0) != 0x30:  # not a PUBLISH — skip this frame, keep scanning
+            continue
         if len(frame) < 2:
             continue
         tlen = int.from_bytes(frame[:2], "big")

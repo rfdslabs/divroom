@@ -101,6 +101,37 @@ images — useful for studying OTA update traffic. It also needs scapy.
 .venv/bin/python carve_firmware.py capture.pcap --out carved
 ```
 
+## Live webcam → panel
+
+<p align="center">
+  <img src="assets/camera-live.png" alt="A webcam feed streaming live on the Pixoo 64's 64×64 LED matrix" width="420">
+</p>
+
+Stream a camera straight to the 64×64 matrix in near real time:
+
+```bash
+.venv/bin/python pixoo.py --ip 192.168.4.20 camera --index 0
+```
+
+How it works (`divroom/camera.py`):
+
+- **ffmpeg** grabs the camera via `avfoundation`, center-crops to a square,
+  and scales to 64×64 `rgb24`, piping raw frames out. It probes each camera's
+  supported modes and picks one (avoiding avfoundation's unsupported 29.97
+  default), so heterogeneous cameras just work.
+- A **reader thread** keeps only the *latest* frame and a **pusher thread**
+  sends it as fast as the device accepts, so capture and push rates are
+  decoupled — you always see the freshest frame with no lag build-up.
+- Each frame is **one HTTP request** (`Draw/SendHttpGif` with its own
+  `PicID`, resetting the GIF id every 60 frames) instead of the usual
+  reset + get-id + send round-trips — roughly 3× the frame rate, close to live.
+- `pixoo.py camera` lists available cameras; pick one with `--index`. On
+  macOS the launching process needs Camera access
+  (System Settings ▸ Privacy & Security ▸ Camera).
+
+The same stream is available from the dashboard's **Camera** panel
+(pick a device, Start/Stop, live fps readout).
+
 ## The device's local API
 
 The Pixoo 64 exposes an **unauthenticated** JSON HTTP API on port 80:
